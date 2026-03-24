@@ -4,3 +4,4 @@ __pycache__/
 scripts/debug_*.py
 .DS_Store
 scripts/test_manorama*.py
+data/news.json
