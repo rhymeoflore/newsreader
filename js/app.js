@@ -45,7 +45,15 @@
             imageHtml = `<img class="modal-image" src="${escapeHtml(article.image)}" alt="" onerror="this.style.display='none'">`;
         }
 
+        const sourceMeta = newsData.sources ? newsData.sources[article.source] : null;
+        const sourceLabel = sourceMeta ? sourceMeta.label : (article.source || "");
+
         let metaItems = "";
+        if (sourceLabel) {
+            metaItems += `<span class="modal-meta-item source-tag source-${escapeHtml(article.source || '')}">
+                ${escapeHtml(sourceLabel)}
+            </span>`;
+        }
         if (article.author) {
             metaItems += `<span class="modal-meta-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -79,7 +87,7 @@
             ${contentHtml}
             <a class="modal-source-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                Read on deshabhimani.com
+                Read on ${escapeHtml(sourceLabel || 'source')}
             </a>
         `;
 
@@ -198,6 +206,8 @@
         const categoryMeta = newsData.categories[article.category];
         const categoryLabel = categoryMeta ? categoryMeta.label : article.category;
         const hasContent = !!article.content;
+        const srcMeta = newsData.sources ? newsData.sources[article.source] : null;
+        const srcLabel = srcMeta ? srcMeta.label : (article.source || "");
 
         let imageHtml;
         if (article.image) {
@@ -209,7 +219,10 @@
         card.innerHTML = `
             ${imageHtml}
             <div class="card-body">
-                <span class="card-category">${escapeHtml(categoryLabel)}</span>
+                <div class="card-tags">
+                    <span class="card-category">${escapeHtml(categoryLabel)}</span>
+                    ${srcLabel ? `<span class="card-source-tag source-${escapeHtml(article.source || '')}">${escapeHtml(srcLabel)}</span>` : ""}
+                </div>
                 <h2 class="card-title">${escapeHtml(article.title)}</h2>
                 <div class="card-meta">
                     <span class="card-source">

@@ -265,6 +265,14 @@ a {
     flex-direction: column;
 }
 
+.card-tags {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
 .card-category {
     display: inline-block;
     font-size: 0.7rem;
@@ -272,7 +280,36 @@ a {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--accent);
-    margin-bottom: 8px;
+}
+
+.card-source-tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #fff;
+    background: #666;
+}
+
+.card-source-tag.source-deshabhimani {
+    background: #c62828;
+}
+
+.card-source-tag.source-manorama {
+    background: #1565c0;
+}
+
+.source-tag.source-deshabhimani {
+    background: #c62828;
+    color: #fff;
+}
+
+.source-tag.source-manorama {
+    background: #1565c0;
+    color: #fff;
 }
 
 .card-title {
@@ -415,6 +452,15 @@ a {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.modal-meta-item.source-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .modal-content {

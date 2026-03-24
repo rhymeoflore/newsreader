@@ -3,3 +3,4 @@ __pycache__/
 .env
 scripts/debug_*.py
 .DS_Store
+scripts/test_manorama*.py

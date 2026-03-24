@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Scraper for deshabhimani.com - fetches news articles from various categories
-and outputs a JSON file for the static frontend.
+Scraper for deshabhimani.com and manoramaonline.com - fetches news articles
+from various categories and outputs a JSON file for the static frontend.
 """
 
 import json
@@ -15,49 +15,42 @@ from typing import List, Optional
 import cloudscraper
 from bs4 import BeautifulSoup
 
-BASE_URL = "https://www.deshabhimani.com"
+# --- Source configurations ---
+
+DESHABHIMANI_BASE = "https://www.deshabhimani.com"
+MANORAMA_BASE = "https://www.manoramaonline.com"
 
 CATEGORIES = {
-    "kerala": {
-        "url": f"{BASE_URL}/News/kerala",
-        "label": "Kerala",
-        "label_ml": "കേരളം",
-    },
-    "national": {
-        "url": f"{BASE_URL}/News/national",
-        "label": "National",
-        "label_ml": "ദേശീയം",
-    },
-    "world": {
-        "url": f"{BASE_URL}/News/world",
-        "label": "International",
-        "label_ml": "അന്താരാഷ്ട്രം",
-    },
-    "sports": {
-        "url": f"{BASE_URL}/sports",
-        "label": "Sports",
-        "label_ml": "കായികം",
-    },
-    "entertainment": {
-        "url": f"{BASE_URL}/entertainment",
-        "label": "Entertainment",
-        "label_ml": "വിനോദം",
-    },
-    "money-business": {
-        "url": f"{BASE_URL}/money-business",
-        "label": "Business",
-        "label_ml": "ബിസിനസ്",
-    },
-    "editorial": {
-        "url": f"{BASE_URL}/editorial",
-        "label": "Editorial",
-        "label_ml": "മുഖപ്രസംഗം",
-    },
-    "technology": {
-        "url": f"{BASE_URL}/technology",
-        "label": "Technology",
-        "label_ml": "ടെക്നോളജി",
-    },
+    "kerala": {"label": "Kerala", "label_ml": "കേരളം"},
+    "national": {"label": "National", "label_ml": "ദേശീയം"},
+    "world": {"label": "International", "label_ml": "അന്താരാഷ്ട്രം"},
+    "sports": {"label": "Sports", "label_ml": "കായികം"},
+    "entertainment": {"label": "Entertainment", "label_ml": "വിനോദം"},
+    "money-business": {"label": "Business", "label_ml": "ബിസിനസ്"},
+    "editorial": {"label": "Editorial", "label_ml": "മുഖപ്രസംഗം"},
+    "technology": {"label": "Technology", "label_ml": "ടെക്നോളജി"},
+}
+
+DESHABHIMANI_CATEGORIES = {
+    "kerala": f"{DESHABHIMANI_BASE}/News/kerala",
+    "national": f"{DESHABHIMANI_BASE}/News/national",
+    "world": f"{DESHABHIMANI_BASE}/News/world",
+    "sports": f"{DESHABHIMANI_BASE}/sports",
+    "entertainment": f"{DESHABHIMANI_BASE}/entertainment",
+    "money-business": f"{DESHABHIMANI_BASE}/money-business",
+    "editorial": f"{DESHABHIMANI_BASE}/editorial",
+    "technology": f"{DESHABHIMANI_BASE}/technology",
+}
+
+MANORAMA_CATEGORIES = {
+    "kerala": f"{MANORAMA_BASE}/news/kerala.html",
+    "national": f"{MANORAMA_BASE}/news/india.html",
+    "world": f"{MANORAMA_BASE}/news/world.html",
+    "sports": f"{MANORAMA_BASE}/sports.html",
+    "entertainment": f"{MANORAMA_BASE}/movies.html",
+    "money-business": f"{MANORAMA_BASE}/business.html",
+    "editorial": f"{MANORAMA_BASE}/news/editorial.html",
+    "technology": f"{MANORAMA_BASE}/technology.html",
 }
 
 scraper = cloudscraper.create_scraper(
@@ -76,20 +69,22 @@ def fetch_page(url: str) -> Optional[BeautifulSoup]:
         return None
 
 
-def extract_articles_from_page(soup: BeautifulSoup, category_key: str) -> List[dict]:
-    """Extract article data from a category page."""
-    # Two-pass approach: collect all URL data first, then pick best title/image
-    url_data = {}  # full_url -> {titles: [], images: []}
+# =====================
+# Deshabhimani scraping
+# =====================
+
+def db_extract_articles(soup: BeautifulSoup, category_key: str) -> List[dict]:
+    """Extract articles from a Deshabhimani category page."""
+    url_data = {}
 
     for link in soup.find_all("a", href=True):
         href = link["href"]
 
-        # Normalize: handle both relative and absolute URLs
         if href.startswith("/"):
             path = href.strip("/")
-            full_url = BASE_URL + "/" + path
-        elif href.startswith(BASE_URL):
-            path = href.replace(BASE_URL, "").strip("/")
+            full_url = DESHABHIMANI_BASE + "/" + path
+        elif href.startswith(DESHABHIMANI_BASE):
+            path = href.replace(DESHABHIMANI_BASE, "").strip("/")
             full_url = href
         else:
             continue
@@ -98,7 +93,6 @@ def extract_articles_from_page(soup: BeautifulSoup, category_key: str) -> List[d
         if len(segments) < 2:
             continue
 
-        # Skip non-article pages
         skip_prefixes = (
             "topics/", "author/", "epaper", "about", "terms",
             "privacy", "quiz", "latest-news", "aksharamuttam",
@@ -107,18 +101,15 @@ def extract_articles_from_page(soup: BeautifulSoup, category_key: str) -> List[d
         if any(path.startswith(p) for p in skip_prefixes):
             continue
 
-        # Skip pure category pages (e.g. /News, /News/kerala, /sports)
         if len(segments) < 3 and not re.search(r'\d{3,}', segments[-1]):
             continue
 
-        # Article slugs typically contain digits
         if not re.search(r'\d{3,}', segments[-1]):
             continue
 
         if full_url not in url_data:
             url_data[full_url] = {"titles": [], "images": []}
 
-        # Collect title
         title = link.get_text(strip=True)
         if title and len(title) >= 5:
             title = re.sub(r'^View news:\s*', '', title)
@@ -127,24 +118,18 @@ def extract_articles_from_page(soup: BeautifulSoup, category_key: str) -> List[d
             if title and len(title) >= 5:
                 url_data[full_url]["titles"].append(title)
 
-        # Collect image
         img = link.find("img")
         if img:
             src = img.get("src") or img.get("data-src")
             if src and "placeholder" not in src and "logo" not in src and "avatar" not in src:
                 url_data[full_url]["images"].append(src)
 
-    # Build articles from collected data
     articles = []
     for full_url, data in url_data.items():
         if not data["titles"]:
             continue
-
-        # Pick shortest title (usually the headline, not the description)
         titles_sorted = sorted(data["titles"], key=len)
         title = titles_sorted[0]
-
-        # Pick first valid image
         image_url = data["images"][0] if data["images"] else None
 
         articles.append({
@@ -152,10 +137,289 @@ def extract_articles_from_page(soup: BeautifulSoup, category_key: str) -> List[d
             "url": full_url,
             "image": image_url,
             "category": category_key,
+            "source": "deshabhimani",
         })
 
     return articles
 
+
+def db_fetch_article_content(url: str) -> Optional[dict]:
+    """Fetch article content from a Deshabhimani article page."""
+    soup = fetch_page(url)
+    if not soup:
+        return None
+
+    result = {}
+
+    body_container = soup.find("div", class_=re.compile(r"max-w-\[610px\]"))
+    if body_container:
+        paragraphs = []
+        for p in body_container.find_all("p"):
+            text = p.get_text(strip=True)
+            if text and len(text) > 10:
+                paragraphs.append(text)
+        if paragraphs:
+            result["content"] = "\n\n".join(paragraphs)
+
+    author_el = soup.find("h6")
+    if author_el:
+        author = author_el.get_text(strip=True)
+        if author and len(author) < 100:
+            result["author"] = author
+
+    time_el = soup.find("time")
+    if time_el:
+        result["date"] = time_el.get_text(strip=True)
+    else:
+        for text_node in soup.find_all(string=re.compile(
+            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}"
+        )):
+            date_match = re.search(
+                r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}(?:,\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)",
+                str(text_node)
+            )
+            if date_match:
+                result["date"] = date_match.group(1)
+                break
+
+    main_img = body_container.find("img") if body_container else None
+    if not main_img:
+        main_img = soup.find("img", src=re.compile(r"images-prd\.deshabhimani\.com"))
+    if main_img:
+        src = main_img.get("src") or main_img.get("data-src")
+        if src and "placeholder" not in src and "logo" not in src:
+            result["image_hq"] = src
+
+    return result if result else None
+
+
+def db_categorize_by_url(article: dict) -> None:
+    """Re-categorize a Deshabhimani homepage article by its URL."""
+    url_path = article["url"].replace(DESHABHIMANI_BASE, "").lower()
+    mapping = {
+        "/news/kerala": "kerala",
+        "/news/national": "national",
+        "/news/world": "world",
+        "/sports": "sports",
+        "/entertainment": "entertainment",
+        "/money-business": "money-business",
+        "/editorial": "editorial",
+        "/technology": "technology",
+        "/pravasi": "world",
+    }
+    for prefix, cat in mapping.items():
+        if prefix in url_path:
+            article["category"] = cat
+            return
+
+
+def scrape_deshabhimani() -> List[dict]:
+    """Scrape all articles from Deshabhimani."""
+    print("\n=== Deshabhimani ===")
+    all_articles = []
+
+    for key, url in DESHABHIMANI_CATEGORIES.items():
+        print(f"  Fetching: {CATEGORIES[key]['label']} ({url})")
+        soup = fetch_page(url)
+        if not soup:
+            continue
+        articles = db_extract_articles(soup, key)[:15]
+        print(f"    Found {len(articles)} articles")
+        all_articles.extend(articles)
+
+    # Homepage
+    print(f"  Fetching: Homepage ({DESHABHIMANI_BASE})")
+    soup = fetch_page(DESHABHIMANI_BASE)
+    if soup:
+        homepage_articles = db_extract_articles(soup, "trending")
+        for article in homepage_articles:
+            db_categorize_by_url(article)
+        print(f"    Found {len(homepage_articles)} articles")
+        all_articles.extend(homepage_articles)
+
+    return all_articles
+
+
+# ====================
+# Manorama scraping
+# ====================
+
+def mm_extract_articles(soup: BeautifulSoup, category_key: str) -> List[dict]:
+    """Extract articles from a Manorama Online category page."""
+    url_data = {}
+
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+
+        # Only process relative URLs or manoramaonline.com URLs
+        if href.startswith("/"):
+            full_url = MANORAMA_BASE + href
+            path = href
+        elif href.startswith(MANORAMA_BASE):
+            full_url = href
+            path = href.replace(MANORAMA_BASE, "")
+        else:
+            continue
+
+        # Must look like an article URL (contains date pattern and .html)
+        if not re.search(r'/\d{4}/\d{2}/\d{2}/', path):
+            continue
+        if not path.endswith(".html"):
+            continue
+
+        # Skip non-article pages
+        skip_patterns = (
+            "/premium/", "/web-stories/", "/podcast/",
+            "/photogallery/", "/videos/", "/shortz/",
+        )
+        if any(pat in path for pat in skip_patterns):
+            continue
+
+        if full_url not in url_data:
+            url_data[full_url] = {"titles": [], "images": []}
+
+        title = link.get_text(strip=True)
+        if title and len(title) >= 5:
+            # Strip common prefixes like "VOTE 2026" or "PETROL CRISIS"
+            title = re.sub(r'^[A-Z\s]{4,}\s+', '', title).strip()
+            if title and len(title) >= 5:
+                url_data[full_url]["titles"].append(title)
+
+        # Manorama uses data-websrc for lazy-loaded images
+        img = link.find("img", class_="cmp-story-list__img")
+        if img:
+            src = img.get("data-websrc") or img.get("src", "")
+            if src and "mo-default" not in src and "config-assets" not in src:
+                url_data[full_url]["images"].append(src)
+
+    articles = []
+    for full_url, data in url_data.items():
+        if not data["titles"]:
+            continue
+        titles_sorted = sorted(data["titles"], key=len)
+        title = titles_sorted[0]
+        image_url = data["images"][0] if data["images"] else None
+
+        articles.append({
+            "title": title,
+            "url": full_url,
+            "image": image_url,
+            "category": category_key,
+            "source": "manorama",
+        })
+
+    return articles
+
+
+def mm_fetch_article_content(url: str) -> Optional[dict]:
+    """Fetch article content from a Manorama article page."""
+    soup = fetch_page(url)
+    if not soup:
+        return None
+
+    result = {}
+
+    # Article body
+    body = soup.find(class_="article-body")
+    if body:
+        # Get text but skip ad blocks
+        paragraphs = []
+        for p in body.find_all("p"):
+            # Skip paragraphs inside ad containers
+            if p.find_parent(class_=re.compile(r"advt|slb|ad-")):
+                continue
+            text = p.get_text(strip=True)
+            if text and len(text) > 10:
+                paragraphs.append(text)
+
+        # If few paragraphs, try getting all text from body
+        if len(paragraphs) < 2:
+            full_text = body.get_text(separator="\n\n", strip=True)
+            # Remove ad lines
+            lines = [l.strip() for l in full_text.split("\n\n")]
+            lines = [l for l in lines if l and len(l) > 15
+                     and "ADVERTISEMENT" not in l
+                     and "Go AD-FREE" not in l
+                     and "Follow Us" not in l
+                     and "googletag" not in l
+                     and "English Summary" not in l]
+            if lines:
+                result["content"] = "\n\n".join(lines)
+        else:
+            result["content"] = "\n\n".join(paragraphs)
+
+    # Author
+    author_el = soup.find(class_="article-header__author-name")
+    if author_el:
+        author = author_el.get_text(strip=True)
+        if author and len(author) < 100:
+            result["author"] = author
+
+    # Date
+    date_el = soup.find(class_="article-header__published-date")
+    if date_el:
+        date_text = date_el.get_text(strip=True)
+        # "Published: March 24, 2026 09:12 AM IST" -> "March 24, 2026 09:12 AM"
+        date_match = re.search(
+            r"((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)",
+            date_text
+        )
+        if date_match:
+            result["date"] = date_match.group(1)
+
+    return result if result else None
+
+
+def mm_categorize_by_url(article: dict) -> None:
+    """Re-categorize a Manorama homepage article by its URL."""
+    url_path = article["url"].replace(MANORAMA_BASE, "").lower()
+    mapping = {
+        "/news/kerala": "kerala",
+        "/district-news/": "kerala",
+        "/news/india": "national",
+        "/news/world": "world",
+        "/sports": "sports",
+        "/movies": "entertainment",
+        "/business": "money-business",
+        "/news/editorial": "editorial",
+        "/technology": "technology",
+    }
+    for prefix, cat in mapping.items():
+        if prefix in url_path:
+            article["category"] = cat
+            return
+
+
+def scrape_manorama() -> List[dict]:
+    """Scrape all articles from Manorama Online."""
+    print("\n=== Manorama Online ===")
+    all_articles = []
+
+    for key, url in MANORAMA_CATEGORIES.items():
+        print(f"  Fetching: {CATEGORIES[key]['label']} ({url})")
+        soup = fetch_page(url)
+        if not soup:
+            continue
+        articles = mm_extract_articles(soup, key)[:15]
+        print(f"    Found {len(articles)} articles")
+        all_articles.extend(articles)
+
+    # Homepage
+    print(f"  Fetching: Homepage ({MANORAMA_BASE})")
+    soup = fetch_page(MANORAMA_BASE)
+    if soup:
+        homepage_articles = mm_extract_articles(soup, "trending")
+        for article in homepage_articles:
+            mm_categorize_by_url(article)
+        print(f"    Found {len(homepage_articles)} articles")
+        all_articles.extend(homepage_articles)
+
+    return all_articles
+
+
+# ====================
+# Common
+# ====================
 
 def deduplicate_articles(articles: List[dict]) -> List[dict]:
     """Remove duplicate articles based on URL."""
@@ -168,125 +432,41 @@ def deduplicate_articles(articles: List[dict]) -> List[dict]:
     return unique
 
 
-def fetch_article_content(url: str) -> Optional[dict]:
-    """Fetch an individual article page and extract the body text and metadata."""
-    soup = fetch_page(url)
-    if not soup:
-        return None
-
-    result = {}
-
-    # Extract article body paragraphs
-    # Article body lives inside a div with class "max-w-[610px]"
-    body_container = soup.find("div", class_=re.compile(r"max-w-\[610px\]"))
-    if body_container:
-        paragraphs = []
-        for p in body_container.find_all("p"):
-            text = p.get_text(strip=True)
-            if text and len(text) > 10:
-                paragraphs.append(text)
-        if paragraphs:
-            result["content"] = "\n\n".join(paragraphs)
-
-    # Extract author
-    author_el = soup.find("h6")
-    if author_el:
-        author = author_el.get_text(strip=True)
-        if author and len(author) < 100:
-            result["author"] = author
-
-    # Extract published date
-    time_el = soup.find("time")
-    if time_el:
-        result["date"] = time_el.get_text(strip=True)
-    else:
-        # Look for date text like "Mar 24, 2026, 08:22 AM"
-        for text_node in soup.find_all(string=re.compile(
-            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}"
-        )):
-            date_match = re.search(
-                r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}(?:,\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)",
-                str(text_node)
-            )
-            if date_match:
-                result["date"] = date_match.group(1)
-                break
-
-    # Extract main image (higher quality than thumbnail)
-    main_img = body_container.find("img") if body_container else None
-    if not main_img:
-        # Look for the featured image before the body
-        main_img = soup.find("img", src=re.compile(r"images-prd\.deshabhimani\.com"))
-    if main_img:
-        src = main_img.get("src") or main_img.get("data-src")
-        if src and "placeholder" not in src and "logo" not in src:
-            result["image_hq"] = src
-
-    return result if result else None
-
-
 def main():
-    print("=== Deshabhimani News Scraper ===")
+    print("=== News Scraper (Deshabhimani + Manorama) ===")
     print(f"Started at: {datetime.now(timezone.utc).isoformat()}")
 
+    # Scrape both sources
+    db_articles = scrape_deshabhimani()
+    mm_articles = scrape_manorama()
+
+    # Interleave articles from both sources for balanced content fetching
     all_articles = []
+    di, mi = 0, 0
+    while di < len(db_articles) or mi < len(mm_articles):
+        if di < len(db_articles):
+            all_articles.append(db_articles[di])
+            di += 1
+        if mi < len(mm_articles):
+            all_articles.append(mm_articles[mi])
+            mi += 1
 
-    for key, cat in CATEGORIES.items():
-        print(f"\nFetching: {cat['label']} ({cat['url']})")
-        soup = fetch_page(cat["url"])
-        if not soup:
-            continue
-
-        articles = extract_articles_from_page(soup, key)
-        # Limit per category to keep the JSON reasonable
-        articles = articles[:15]
-        print(f"  Found {len(articles)} articles")
-        all_articles.extend(articles)
-
-    # Also scrape the homepage for top/trending stories
-    print(f"\nFetching: Homepage ({BASE_URL})")
-    soup = fetch_page(BASE_URL)
-    if soup:
-        homepage_articles = extract_articles_from_page(soup, "trending")
-        # Try to re-categorize homepage articles based on their URL
-        for article in homepage_articles:
-            url_path = article["url"].replace(BASE_URL, "").lower()
-            if "/news/kerala" in url_path:
-                article["category"] = "kerala"
-            elif "/news/national" in url_path:
-                article["category"] = "national"
-            elif "/news/world" in url_path:
-                article["category"] = "world"
-            elif "/sports" in url_path:
-                article["category"] = "sports"
-            elif "/entertainment" in url_path:
-                article["category"] = "entertainment"
-            elif "/money-business" in url_path:
-                article["category"] = "money-business"
-            elif "/editorial" in url_path:
-                article["category"] = "editorial"
-            elif "/technology" in url_path:
-                article["category"] = "technology"
-            elif "/pravasi" in url_path:
-                article["category"] = "world"
-            # else stays "trending"
-
-        print(f"  Found {len(homepage_articles)} articles")
-        all_articles.extend(homepage_articles)
-
-    # Deduplicate
     all_articles = deduplicate_articles(all_articles)
     print(f"\nTotal unique articles: {len(all_articles)}")
 
-    # Fetch full article content for each article
-    # Limit to avoid overloading the server
-    max_articles_to_fetch = int(os.environ.get("MAX_ARTICLE_FETCH", "60"))
+    # Fetch full article content
+    max_articles_to_fetch = int(os.environ.get("MAX_ARTICLE_FETCH", "80"))
     articles_to_fetch = all_articles[:max_articles_to_fetch]
     print(f"\nFetching content for {len(articles_to_fetch)} articles...")
 
     for i, article in enumerate(articles_to_fetch):
-        print(f"  [{i+1}/{len(articles_to_fetch)}] {article['url'][-50:]}")
-        content_data = fetch_article_content(article["url"])
+        print(f"  [{i+1}/{len(articles_to_fetch)}] {article['source']}: {article['url'][-50:]}")
+
+        if article["source"] == "deshabhimani":
+            content_data = db_fetch_article_content(article["url"])
+        else:
+            content_data = mm_fetch_article_content(article["url"])
+
         if content_data:
             if "content" in content_data:
                 article["content"] = content_data["content"]
@@ -296,7 +476,6 @@ def main():
                 article["date"] = content_data["date"]
             if "image_hq" in content_data and not article.get("image"):
                 article["image"] = content_data["image_hq"]
-        # Small delay to be respectful
         time.sleep(0.3)
 
     # Build output
@@ -311,14 +490,24 @@ def main():
         "label_ml": "ട്രെൻഡിംഗ്",
     }
 
+    sources_meta = {
+        "deshabhimani": {
+            "label": "Deshabhimani",
+            "url": DESHABHIMANI_BASE,
+        },
+        "manorama": {
+            "label": "Manorama",
+            "url": MANORAMA_BASE,
+        },
+    }
+
     output = {
         "last_updated": datetime.now(timezone.utc).isoformat(),
-        "source": "https://www.deshabhimani.com",
+        "sources": sources_meta,
         "categories": categories_meta,
         "articles": all_articles,
     }
 
-    # Write output
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "news.json")
