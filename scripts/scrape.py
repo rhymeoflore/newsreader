@@ -227,16 +227,6 @@ def scrape_deshabhimani() -> List[dict]:
         print(f"    Found {len(articles)} articles")
         all_articles.extend(articles)
 
-    # Homepage
-    print(f"  Fetching: Homepage ({DESHABHIMANI_BASE})")
-    soup = fetch_page(DESHABHIMANI_BASE)
-    if soup:
-        homepage_articles = db_extract_articles(soup, "trending")
-        for article in homepage_articles:
-            db_categorize_by_url(article)
-        print(f"    Found {len(homepage_articles)} articles")
-        all_articles.extend(homepage_articles)
-
     return all_articles
 
 
@@ -404,16 +394,6 @@ def scrape_manorama() -> List[dict]:
         print(f"    Found {len(articles)} articles")
         all_articles.extend(articles)
 
-    # Homepage
-    print(f"  Fetching: Homepage ({MANORAMA_BASE})")
-    soup = fetch_page(MANORAMA_BASE)
-    if soup:
-        homepage_articles = mm_extract_articles(soup, "trending")
-        for article in homepage_articles:
-            mm_categorize_by_url(article)
-        print(f"    Found {len(homepage_articles)} articles")
-        all_articles.extend(homepage_articles)
-
     return all_articles
 
 
@@ -485,11 +465,6 @@ def main():
             "label": cat["label"],
             "label_ml": cat["label_ml"],
         }
-    categories_meta["trending"] = {
-        "label": "Trending",
-        "label_ml": "ട്രെൻഡിംഗ്",
-    }
-
     sources_meta = {
         "deshabhimani": {
             "label": "Deshabhimani",

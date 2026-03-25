@@ -150,7 +150,7 @@
 
         const order = [
             "kerala", "national", "world", "sports",
-            "entertainment", "money-business", "technology", "editorial", "trending"
+            "entertainment", "money-business", "technology", "editorial"
         ];
 
         for (const key of order) {
