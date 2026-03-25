@@ -112,6 +112,18 @@ a {
     opacity: 0.7;
 }
 
+.visit-counter {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.visit-counter svg {
+    opacity: 0.8;
+}
+
 .theme-toggle {
     background: var(--cat-bg);
     border: none;
@@ -555,6 +567,9 @@ body.modal-open {
         gap: 16px;
     }
     .last-updated {
+        display: none;
+    }
+    .visit-counter {
         display: none;
     }
 }

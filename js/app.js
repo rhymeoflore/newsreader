@@ -264,6 +264,20 @@ dom.grid.innerHTML = "";
         }
     }
 
+    function fetchVisitCount() {
+        const el = document.getElementById("visitCounter");
+        if (!el) return;
+
+        fetch("https://newsreader.goatcounter.com/counter//TOTAL.json")
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.count) {
+                    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> ${data.count} visits`;
+                }
+            })
+            .catch(() => {});
+    }
+
     // --- Init ---
     async function init() {
         initTheme();
@@ -281,6 +295,7 @@ dom.grid.innerHTML = "";
         buildCategoryNav();
         renderArticles();
         showLastUpdated();
+        fetchVisitCount();
     }
 
     init();
