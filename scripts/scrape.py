@@ -143,54 +143,6 @@ def db_extract_articles(soup: BeautifulSoup, category_key: str) -> List[dict]:
     return articles
 
 
-def extract_view_count(soup: BeautifulSoup) -> int:
-    """Try to extract view/engagement count from an article page.
-
-    Checks JSON-LD structured data and common HTML patterns.
-    Returns 0 when no count can be determined.
-    """
-    # 1. JSON-LD interactionStatistic / commentCount
-    for script in soup.find_all("script", type="application/ld+json"):
-        try:
-            data = json.loads(script.string or "")
-            if isinstance(data, list):
-                data = data[0] if data else {}
-            if not isinstance(data, dict):
-                continue
-            stats = data.get("interactionStatistic")
-            if stats:
-                items = stats if isinstance(stats, list) else [stats]
-                for item in items:
-                    count = item.get("userInteractionCount", 0)
-                    if count:
-                        return int(count)
-            comment_count = data.get("commentCount")
-            if comment_count:
-                return int(comment_count)
-        except (json.JSONDecodeError, ValueError, TypeError):
-            continue
-
-    # 2. Common HTML patterns for view/read counts
-    for el in soup.find_all(class_=re.compile(
-        r"view[_-]?count|read[_-]?count|article[_-]?views|story[_-]?views|hit[_-]?count",
-        re.I,
-    )):
-        text = el.get_text(strip=True)
-        match = re.search(r"([\d,]+)", text)
-        if match:
-            return int(match.group(1).replace(",", ""))
-
-    # 3. Meta tags (og:*, article:*)
-    for meta in soup.find_all("meta"):
-        prop = meta.get("property", "") or meta.get("name", "")
-        if re.search(r"interaction|view|read|comment", prop, re.I):
-            val = meta.get("content", "")
-            if val and val.isdigit():
-                return int(val)
-
-    return 0
-
-
 def db_fetch_article_content(url: str) -> Optional[dict]:
     """Fetch article content from a Deshabhimani article page."""
     soup = fetch_page(url)
@@ -237,8 +189,6 @@ def db_fetch_article_content(url: str) -> Optional[dict]:
         src = main_img.get("src") or main_img.get("data-src")
         if src and "placeholder" not in src and "logo" not in src:
             result["image_hq"] = src
-
-    result["view_count"] = extract_view_count(soup)
 
     return result if result else None
 
@@ -417,8 +367,6 @@ def mm_fetch_article_content(url: str) -> Optional[dict]:
         if date_match:
             result["date"] = date_match.group(1)
 
-    result["view_count"] = extract_view_count(soup)
-
     return result if result else None
 
 
@@ -528,7 +476,6 @@ def main():
                 article["date"] = content_data["date"]
             if "image_hq" in content_data and not article.get("image"):
                 article["image"] = content_data["image_hq"]
-            article["view_count"] = content_data.get("view_count", 0)
         time.sleep(0.3)
 
     # Build output

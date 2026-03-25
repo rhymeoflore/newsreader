@@ -66,13 +66,6 @@
                 ${escapeHtml(article.date)}
             </span>`;
         }
-        if (article.view_count) {
-            metaItems += `<span class="modal-meta-item modal-views">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                ${escapeHtml(formatViewCount(article.view_count))} views
-            </span>`;
-        }
-
         let contentHtml;
         if (article.content) {
             const paragraphs = article.content.split("\n\n");
@@ -192,12 +185,7 @@
             articles = articles.filter(a => a.category === activeCategory);
         }
 
-        // Sort articles by view count.
-        // Kerala category: 50-50 interleave between sources, each sorted by views.
-        // Other categories: purely by view count descending.
-        articles = sortArticles(articles, activeCategory);
-
-        dom.grid.innerHTML = "";
+dom.grid.innerHTML = "";
 
         if (articles.length === 0) {
             dom.grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:var(--text-secondary);padding:40px;">No articles found in this category.</p>`;
@@ -208,35 +196,6 @@
             const card = createCard(article);
             dom.grid.appendChild(card);
         }
-    }
-
-    function sortArticles(articles, category) {
-        if (category === "kerala") {
-            // 50-50 split between sources, each sorted by view count
-            const manorama = articles
-                .filter(a => a.source === "manorama")
-                .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-            const deshabhimani = articles
-                .filter(a => a.source === "deshabhimani")
-                .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-
-            const result = [];
-            let mi = 0, di = 0;
-            while (mi < manorama.length || di < deshabhimani.length) {
-                if (mi < manorama.length) {
-                    result.push(manorama[mi]);
-                    mi++;
-                }
-                if (di < deshabhimani.length) {
-                    result.push(deshabhimani[di]);
-                    di++;
-                }
-            }
-            return result;
-        }
-
-        // All other categories (including "all"): sort purely by view count
-        return articles.slice().sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
     }
 
     function createCard(article) {
@@ -256,11 +215,6 @@
             imageHtml = `<div class="card-placeholder">ദേ</div>`;
         }
 
-        const viewCount = article.view_count || 0;
-        const viewCountHtml = viewCount > 0
-            ? `<span class="card-views">${formatViewCount(viewCount)} views</span>`
-            : "";
-
         card.innerHTML = `
             ${imageHtml}
             <div class="card-body">
@@ -274,7 +228,6 @@
                         ${hasContent ? "Tap to read" : ""}
                         ${article.date ? " · " + escapeHtml(article.date) : ""}
                     </span>
-                    ${viewCountHtml}
                 </div>
             </div>
         `;
@@ -282,16 +235,6 @@
         card.addEventListener("click", () => openArticle(article));
 
         return card;
-    }
-
-    function formatViewCount(count) {
-        if (count >= 1000000) {
-            return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-        }
-        if (count >= 1000) {
-            return (count / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-        }
-        return String(count);
     }
 
     function escapeHtml(str) {
