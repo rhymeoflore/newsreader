@@ -75,11 +75,16 @@
         var t = setInterval(function() {
             if (window.goatcounter && window.goatcounter.visit_count) {
                 clearInterval(t);
-                window.goatcounter.visit_count({
-                    append: '#visitCounter',
-                    path: 'TOTAL',
-                    no_branding: true
+                var r = new XMLHttpRequest();
+                r.addEventListener('load', function() {
+                    var el = document.getElementById('visitCounter');
+                    if (el) {
+                        var data = JSON.parse(this.responseText);
+                        el.textContent = 'visits: ' + data.count;
+                    }
                 });
+                r.open('GET', 'https://newsreader.goatcounter.com/counter/TOTAL.json');
+                r.send();
             }
         }, 100);
     </script>
