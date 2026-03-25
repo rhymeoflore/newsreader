@@ -331,12 +331,27 @@ a {
     display: flex;
     align-items: center;
     gap: 4px;
+    justify-content: space-between;
 }
 
 .card-source {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.card-views {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.modal-views {
+    color: var(--text-secondary);
+    opacity: 0.8;
 }
 
 /* === Article Modal === */
