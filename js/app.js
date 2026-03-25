@@ -268,7 +268,7 @@ dom.grid.innerHTML = "";
         const el = document.getElementById("visitCounter");
         if (!el) return;
 
-        fetch("https://newsreader.goatcounter.com/counter//TOTAL.json")
+        fetch("https://newsreader.goatcounter.com/counter/TOTAL.json")
             .then(r => r.json())
             .then(data => {
                 if (data && data.count) {
